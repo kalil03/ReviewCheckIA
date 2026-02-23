@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReviewCheck IA — Análise de Sentimento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080b0f;
+    --surface: #0e1318;
+    --surface2: #141a22;
+    --border: rgba(255,255,255,0.06);
+    --border-bright: rgba(255,255,255,0.12);
+    --text: #e8edf2;
+    --text-muted: #5a6472;
+    --text-dim: #8a95a3;
+    --accent: #00e5a0;
+    --accent-dim: rgba(0,229,160,0.12);
+    --accent-glow: rgba(0,229,160,0.3);
+    --negative: #ff4d6d;
+    --negative-dim: rgba(255,77,109,0.12);
+    --neutral: #f5a623;
+    --neutral-dim: rgba(245,166,35,0.12);
+    --positive: #00e5a0;
+    --positive-dim: rgba(0,229,160,0.12);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── BACKGROUND ATMOSPHERE ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% -10%, rgba(0,229,160,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 110%, rgba(0,120,255,0.05) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── GRID OVERLAY ── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .page-wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ── NAV ── */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.2rem;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 12px var(--accent-glow);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.8); }
+  }
+
+  .nav-badge {
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid rgba(0,229,160,0.25);
+    padding: 4px 12px;
+    border-radius: 100px;
+    background: var(--accent-dim);
+  }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 100px 0 60px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: center;
+  }
+
+  .hero-eyebrow {
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .hero-eyebrow::before {
+    content: '';
+    display: block;
+    width: 24px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(2.4rem, 4vw, 3.6rem);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    margin-bottom: 24px;
+  }
+
+  h1 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .hero-desc {
+    color: var(--text-dim);
+    font-size: 1.05rem;
+    line-height: 1.7;
+    margin-bottom: 40px;
+    max-width: 420px;
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: 32px;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .stat-num {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.6rem;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── HERO VISUAL ── */
+  .hero-visual {
+    position: relative;
+  }
+
+  .mock-card {
+    background: var(--surface);
+    border: 1px solid var(--border-bright);
+    border-radius: 20px;
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .mock-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+
+  .mock-reviews {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .mock-review {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    animation: slideIn 0.5s ease both;
+  }
+
+  .mock-review:nth-child(1) { animation-delay: 0.1s; }
+  .mock-review:nth-child(2) { animation-delay: 0.25s; }
+  .mock-review:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .mock-sentiment-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .mock-review-text {
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mock-badge {
+    font-size: 0.68rem;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 100px;
+    white-space: nowrap;
+  }
+
+  .mock-badge.pos { background: var(--positive-dim); color: var(--positive); }
+  .mock-badge.neg { background: var(--negative-dim); color: var(--negative); }
+  .mock-badge.neu { background: var(--neutral-dim); color: var(--neutral); }
+
+  .mock-conf {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+  }
+
+  /* ── MAIN DEMO ── */
+  .demo-section {
+    padding: 80px 0;
+  }
+
+  .section-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 48px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .demo-grid {
+    display: grid;
+    grid-template-columns: 1fr 420px;
+    gap: 24px;
+    align-items: start;
+  }
+
+  /* ── INPUT PANEL ── */
+  .input-panel {
+    background: var(--surface);
+    border: 1px solid var(--border-bright);
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .input-panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 10%, var(--border-bright) 50%, transparent 90%);
+  }
+
+  .input-header {
+    padding: 20px 24px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .input-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    letter-spacing: 0.02em;
+  }
+
+  .char-count {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-family: 'Syne', sans-serif;
+  }
+
+  textarea {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 300;
+    line-height: 1.7;
+    padding: 16px 24px 20px;
+    resize: none;
+    min-height: 160px;
+    caret-color: var(--accent);
+  }
+
+  textarea::placeholder {
+    color: var(--text-muted);
+  }
+
+  .input-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .examples-label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+
+  .examples-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .example-chip {
+    font-size: 0.75rem;
+    padding: 5px 12px;
+    border-radius: 100px;
+    border: 1px solid var(--border-bright);
+    background: var(--surface2);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .example-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .analyze-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 14px;
+    padding: 16px 28px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    width: 100%;
+    margin: 0 24px 24px;
+    width: calc(100% - 48px);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .analyze-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .analyze-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 32px var(--accent-glow); }
+  .analyze-btn:hover::before { opacity: 1; }
+  .analyze-btn:active { transform: translateY(0); }
+  .analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .btn-icon { font-size: 1rem; }
+
+  /* ── RESULT PANEL ── */
+  .result-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border-bright);
+    border-radius: 20px;
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    transition: all 0.4s ease;
+  }
+
+  .result-card.has-result {
+    align-items: stretch;
+    text-align: left;
+  }
+
+  .result-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-muted);
+  }
+
+  .result-placeholder-icon {
+    font-size: 2.5rem;
+    opacity: 0.3;
+  }
+
+  .result-placeholder-text {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  /* Sentiment display */
+  .sentiment-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+
+  .sentiment-label {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 2rem;
+    letter-spacing: -0.03em;
+  }
+
+  .sentiment-emoji {
+    font-size: 2.4rem;
+    animation: bounceIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes bounceIn {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  /* Confidence bars */
+  .conf-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .conf-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .conf-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .conf-name {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 500;
+  }
+
+  .conf-pct {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+
+  .conf-bar-bg {
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 100px;
+    overflow: hidden;
+  }
+
+  .conf-bar-fill {
+    height: 100%;
+    border-radius: 100px;
+    transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    width: 0%;
+  }
+
+  /* ── HISTORY CARD ── */
+  .history-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  .history-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .history-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .history-count {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    background: var(--surface2);
+    padding: 2px 8px;
+    border-radius: 100px;
+  }
+
+  .history-list {
+    max-height: 280px;
+    overflow-y: auto;
+  }
+
+  .history-list::-webkit-scrollbar { width: 4px; }
+  .history-list::-webkit-scrollbar-track { background: transparent; }
+  .history-list::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 100px; }
+
+  .history-item {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: fadeSlide 0.3s ease;
+  }
+
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .history-item:last-child { border-bottom: none; }
+
+  .history-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .history-text {
+    flex: 1;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .history-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 100px;
+    white-space: nowrap;
+  }
+
+  .history-empty {
+    padding: 32px 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+  }
+
+  /* ── METRICS SECTION ── */
+  .metrics-section {
+    padding: 60px 0 100px;
+  }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-top: 40px;
+  }
+
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .metric-card:hover { border-color: var(--border-bright); }
+
+  .metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .metric-card.pos::before { background: var(--positive); }
+  .metric-card.neg::before { background: var(--negative); }
+  .metric-card.neu::before { background: var(--neutral); }
+  .metric-card.acc::before { background: linear-gradient(90deg, var(--accent), #0099ff); }
+
+  .metric-icon {
+    font-size: 1.4rem;
+    margin-bottom: 12px;
+  }
+
+  .metric-value {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 2rem;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .metric-name {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── LOADING ── */
+  .loading-dots {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .loading-dots span {
+    width: 5px;
+    height: 5px;
+    background: #000;
+    border-radius: 50%;
+    animation: dotBounce 0.6s ease-in-out infinite alternate;
+  }
+
+  .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes dotBounce {
+    from { transform: translateY(0); opacity: 0.4; }
+    to { transform: translateY(-4px); opacity: 1; }
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .footer-text {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+
+  .footer-text a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .footer-model {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+
+  .model-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; gap: 40px; padding: 60px 0 40px; }
+    .demo-grid { grid-template-columns: 1fr; }
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 600px) {
+    .metrics-grid { grid-template-columns: 1fr 1fr; }
+    .hero-stats { gap: 24px; }
+    h1 { font-size: 2rem; }
+  }
+
+  /* ── RESULT COLORS ── */
+  .sentiment-label.pos { color: var(--positive); }
+  .sentiment-label.neg { color: var(--negative); }
+  .sentiment-label.neu { color: var(--neutral); }
+
+  .result-card.pos { border-color: rgba(0,229,160,0.2); }
+  .result-card.neg { border-color: rgba(255,77,109,0.2); }
+  .result-card.neu { border-color: rgba(245,166,35,0.2); }
+
+  .result-card.pos::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--positive), transparent); }
+  .result-card.neg::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--negative), transparent); }
+  .result-card.neu::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--neutral), transparent); }
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <!-- NAV -->
+  <nav>
+    <a href="#" class="logo">
+      <span class="logo-dot"></span>
+      ReviewCheck<em style="color:var(--accent)">IA</em>
+    </a>
+    <span class="nav-badge">BERTimbau · PT-BR</span>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-eyebrow">Análise de Sentimento</div>
+      <h1>Entenda o que<br>seus clientes<br><em>realmente</em> sentem</h1>
+      <p class="hero-desc">
+        Modelo de IA treinado com 187 mil reviews reais do Mercado Livre. 
+        Classificação instantânea em português brasileiro — sem APIs externas.
+      </p>
+      <div class="hero-stats">
+        <div class="stat">
+          <span class="stat-num">187k</span>
+          <span class="stat-label">Reviews</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num">95%</span>
+          <span class="stat-label">Acurácia</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num">PT-BR</span>
+          <span class="stat-label">Nativo</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="mock-card">
+        <div class="mock-reviews">
+          <div class="mock-review">
+            <div class="mock-sentiment-dot" style="background:var(--positive);box-shadow:0 0 8px var(--accent-glow)"></div>
+            <span class="mock-review-text">Produto incrível, superou as expectativas!</span>
+            <span class="mock-badge pos">Positivo</span>
+            <span class="mock-conf">99%</span>
+          </div>
+          <div class="mock-review">
+            <div class="mock-sentiment-dot" style="background:var(--negative);box-shadow:0 0 8px rgba(255,77,109,0.4)"></div>
+            <span class="mock-review-text">Chegou quebrado, péssima embalagem...</span>
+            <span class="mock-badge neg">Negativo</span>
+            <span class="mock-conf">98%</span>
+          </div>
+          <div class="mock-review">
+            <div class="mock-sentiment-dot" style="background:var(--neutral);box-shadow:0 0 8px rgba(245,166,35,0.4)"></div>
+            <span class="mock-review-text">Mediano, cumpre o que promete.</span>
+            <span class="mock-badge neu">Neutro</span>
+            <span class="mock-conf">57%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEMO -->
+  <section class="demo-section">
+    <div class="section-label">Demo ao vivo</div>
+
+    <div class="demo-grid">
+
+      <!-- INPUT -->
+      <div style="display:flex;flex-direction:column;gap:0">
+        <div class="input-panel">
+          <div class="input-header">
+            <span class="input-title">Digite uma review</span>
+            <span class="char-count" id="charCount">0 / 500</span>
+          </div>
+          <textarea
+            id="reviewInput"
+            placeholder="Ex: O produto chegou dentro do prazo e a qualidade superou minhas expectativas..."
+            maxlength="500"
+          ></textarea>
+          <div class="input-footer">
+            <span class="examples-label">Exemplos</span>
+            <div class="examples-row">
+              <button class="example-chip" onclick="setExample('Produto excelente! Chegou antes do prazo e a qualidade é incrível. Super recomendo!')">😊 Positivo</button>
+              <button class="example-chip" onclick="setExample('Péssimo produto. Chegou quebrado e o vendedor não respondeu minha reclamação.')">😡 Negativo</button>
+              <button class="example-chip" onclick="setExample('Produto razoável, cumpre o que promete. Nada de especial, mas serve.')">😐 Neutro</button>
+            </div>
+          </div>
+          <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">
+            <span class="btn-icon">⚡</span>
+            <span id="btnText">Analisar Sentimento</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- RESULTS + HISTORY -->
+      <div class="result-panel">
+
+        <div class="result-card" id="resultCard">
+          <div class="result-placeholder" id="resultPlaceholder">
+            <div class="result-placeholder-icon">🔍</div>
+            <div class="result-placeholder-text">O resultado aparece aqui</div>
+          </div>
+          <div id="resultContent" style="display:none; width:100%">
+            <div class="sentiment-header">
+              <div>
+                <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Sentimento detectado</div>
+                <div class="sentiment-label" id="sentimentLabel">—</div>
+              </div>
+              <div class="sentiment-emoji" id="sentimentEmoji">—</div>
+            </div>
+            <div class="conf-section" id="confSection"></div>
+          </div>
+        </div>
+
+        <div class="history-card">
+          <div class="history-header">
+            <span class="history-title">Histórico</span>
+            <span class="history-count" id="histCount">0 análises</span>
+          </div>
+          <div class="history-list" id="historyList">
+            <div class="history-empty">Nenhuma análise ainda</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- METRICS -->
+  <section class="metrics-section">
+    <div class="section-label">Performance do modelo</div>
+    <div class="metrics-grid">
+      <div class="metric-card acc">
+        <div class="metric-icon">🎯</div>
+        <div class="metric-value">95%</div>
+        <div class="metric-name">Acurácia Geral</div>
+      </div>
+      <div class="metric-card pos">
+        <div class="metric-icon">🟢</div>
+        <div class="metric-value">0.98</div>
+        <div class="metric-name">F1 · Positivo</div>
+      </div>
+      <div class="metric-card neg">
+        <div class="metric-icon">🔴</div>
+        <div class="metric-value">0.77</div>
+        <div class="metric-name">F1 · Negativo</div>
+      </div>
+      <div class="metric-card neu">
+        <div class="metric-icon">🟡</div>
+        <div class="metric-value">0.40</div>
+        <div class="metric-name">F1 · Neutro</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <span class="footer-text">ReviewCheck<strong>IA</strong> — Modelo BERTimbau fine-tuned</span>
+    <div class="footer-model">
+      <div class="model-dot"></div>
+      neuralmind/bert-base-portuguese-cased
+    </div>
+  </footer>
+
+</div>
+
+<script>
+  // ── Char counter ──
+  const textarea = document.getElementById('reviewInput');
+  const charCount = document.getElementById('charCount');
+  textarea.addEventListener('input', () => {
+    charCount.textContent = `${textarea.value.length} / 500`;
+  });
+
+  // ── Examples ──
+  function setExample(text) {
+    textarea.value = text;
+    charCount.textContent = `${text.length} / 500`;
+    textarea.focus();
+  }
+
+  // ── History ──
+  let history = [];
+
+  function addToHistory(text, sentiment, color) {
+    history.unshift({ text, sentiment, color });
+    if (history.length > 10) history.pop();
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const list = document.getElementById('historyList');
+    const count = document.getElementById('histCount');
+    count.textContent = `${history.length} análise${history.length !== 1 ? 's' : ''}`;
+
+    if (history.length === 0) {
+      list.innerHTML = '<div class="history-empty">Nenhuma análise ainda</div>';
+      return;
+    }
+
+    list.innerHTML = history.map(item => `
+      <div class="history-item">
+        <div class="history-dot" style="background:${item.color}"></div>
+        <span class="history-text">${item.text}</span>
+        <span class="history-badge" style="background:${item.color}22;color:${item.color}">${item.sentiment}</span>
+      </div>
+    `).join('');
+  }
+
+
+  // ── Analyze ──
+  async function analyze() {
+    const text = textarea.value.trim();
+    if (!text) return;
+
+    const btn = document.getElementById('analyzeBtn');
+    const btnText = document.getElementById('btnText');
+
+    // Loading state
+    btn.disabled = true;
+    btnText.innerHTML = '<span class="loading-dots"><span></span><span></span><span></span></span>';
+
+    try {
+        const res = await fetch('/analyze', { 
+            method:'POST', 
+            headers:{'Content-Type':'application/json'}, 
+            body: JSON.stringify({text}) 
+        });
+        
+        if (!res.ok) {
+            throw new Error(`API error: ${res.status}`);
+        }
+        
+        const result = await res.json();
+        showResult(text, result);
+    } catch(err) {
+        console.error(err);
+        alert('Erro ao conectar com a API de Sentimento!');
+    }
+
+    btn.disabled = false;
+    btnText.textContent = 'Analisar Sentimento';
+  }
+
+  function showResult(text, result) {
+    const card = document.getElementById('resultCard');
+    const placeholder = document.getElementById('resultPlaceholder');
+    const content = document.getElementById('resultContent');
+    const label = document.getElementById('sentimentLabel');
+    const emoji = document.getElementById('sentimentEmoji');
+    const confSection = document.getElementById('confSection');
+
+    const config = {
+      'Positivo': { cls: 'pos', emoji: '😊', color: 'var(--positive)', dotColor: '#00e5a0' },
+      'Negativo': { cls: 'neg', emoji: '😤', color: 'var(--negative)', dotColor: '#ff4d6d' },
+      'Neutro':   { cls: 'neu', emoji: '😐', color: 'var(--neutral)',  dotColor: '#f5a623' },
+    };
+
+    const cfg = config[result.sentiment];
+
+    // Update card
+    card.className = `result-card has-result ${cfg.cls}`;
+    placeholder.style.display = 'none';
+    content.style.display = 'block';
+
+    label.textContent = result.sentiment;
+    label.className = `sentiment-label ${cfg.cls}`;
+    emoji.textContent = cfg.emoji;
+
+    // Confidence bars
+    const bars = [
+      { name: 'Positivo', value: result.scores.pos, color: 'var(--positive)' },
+      { name: 'Neutro',   value: result.scores.neu, color: 'var(--neutral)' },
+      { name: 'Negativo', value: result.scores.neg, color: 'var(--negative)' },
+    ];
+
+    confSection.innerHTML = bars.map(b => `
+      <div class="conf-row">
+        <div class="conf-meta">
+          <span class="conf-name">${b.name}</span>
+          <span class="conf-pct" style="color:${b.color}">${b.value}%</span>
+        </div>
+        <div class="conf-bar-bg">
+          <div class="conf-bar-fill" style="background:${b.color}" data-width="${b.value}"></div>
+        </div>
+      </div>
+    `).join('');
+
+    // Animate bars
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.conf-bar-fill').forEach(bar => {
+        bar.style.width = bar.dataset.width + '%';
+      });
+    });
+
+    // Add to history
+    addToHistory(text.length > 40 ? text.slice(0, 40) + '…' : text, result.sentiment, cfg.dotColor);
+  }
+
+  // Enter key support
+  textarea.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) analyze();
+  });
+</script>
+</body>
+</html>
