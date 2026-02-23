@@ -2,7 +2,7 @@
 title: ReviewCheckIA
 emoji: 🎯
 colorFrom: green
-colorTo: teal
+colorTo: green
 sdk: docker
 pinned: false
 ---
