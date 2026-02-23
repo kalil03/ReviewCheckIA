@@ -7,11 +7,11 @@ sdk: docker
 pinned: false
 ---
 
-# 🇧🇷 Análise de Sentimento — Reviews Mercado Livre
+# Análise de Sentimento — Reviews Mercado Livre
 
 Projeto de **NLP (Processamento de Linguagem Natural)** para classificação de sentimento em reviews de produtos do Mercado Livre usando fine-tuning do **BERTimbau** (BERT pré-treinado em Português).
 
-## 📊 Objetivo
+## Objetivo
 
 Classificar automaticamente reviews de consumidores em **3 categorias**:
 
@@ -21,7 +21,7 @@ Classificar automaticamente reviews de consumidores em **3 categorias**:
 | 🟡 Neutro | ⭐ 3 | 1 |
 | 🟢 Positivo | ⭐ 4-5 | 2 |
 
-## 🧠 Arquitetura
+## Arquitetura
 
 - **Modelo base**: `neuralmind/bert-base-portuguese-cased` (BERTimbau)
 - **Fine-tuning**: Classification head com 3 classes
@@ -43,7 +43,7 @@ pip install -r requirements.txt
 ```
 
 > [!NOTE]
-> Para a **RX 6600**, é necessário setar o workaround no `~/.bashrc`:
+> Para a **GPU AMD*, é necessário setar o workaround no `~/.bashrc`:
 > `export HSA_OVERRIDE_GFX_VERSION=10.3.0`
 
 ### 2. Pipeline completo
@@ -52,12 +52,12 @@ python3 main.py
 ```
 
 Isso executa automaticamente todos os steps em sequência:
-1. 📦 Pré-processamento
-2. 📊 Análise Exploratória
-3. 🔧 Preparação do Dataset
-4. 🤖 Treinamento
-5. 📊 Avaliação
-6. 🔍 Insights de Mercado
+1. Pré-processamento
+2. Análise Exploratória
+3. Preparação do Dataset
+4. Treinamento
+5. Avaliação
+6. Insights de Mercado
 
 ### Opções
 ```bash
@@ -94,7 +94,7 @@ python3 src/07_inference.py --text "O produto é fantástico, amei!"
 ```
 
 
-## 📈 Análises Geradas
+## Análises Geradas
 
 ### EDA (`results/eda/`)
 - Distribuição de ratings e sentimentos
@@ -108,7 +108,7 @@ python3 src/07_inference.py --text "O produto é fantástico, amei!"
 - Evolução temporal do sentimento
 - Ranking de satisfação por produto
 
-## 🛠 Tecnologias
+## Tecnologias
 
 - **PyTorch** + **HuggingFace Transformers**
 - **BERTimbau** (BERT Português)
