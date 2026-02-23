@@ -776,12 +776,36 @@
     .hero { grid-template-columns: 1fr; gap: 40px; padding: 60px 0 40px; }
     .demo-grid { grid-template-columns: 1fr; }
     .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+    .hero-visual { display: none; }
   }
 
   @media (max-width: 600px) {
-    .metrics-grid { grid-template-columns: 1fr 1fr; }
-    .hero-stats { gap: 24px; }
-    h1 { font-size: 2rem; }
+    .page-wrap { padding: 0 16px; }
+    .metrics-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .hero-stats { gap: 20px; }
+    .hero-stats .stat-num { font-size: 1.3rem; }
+    h1 { font-size: 1.8rem; }
+    .hero { padding: 40px 0 24px; gap: 24px; }
+    .hero-desc { font-size: 0.95rem; }
+    nav { padding: 16px 0; }
+    .logo { font-size: 1rem; }
+    .nav-badge { font-size: 0.65rem; padding: 3px 10px; }
+    .demo-section { padding: 40px 0; }
+    .metrics-section { padding: 32px 0 60px; }
+    .input-footer { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .examples-row { flex-wrap: wrap; }
+    .example-chip { font-size: 0.72rem; }
+    .analyze-btn { font-size: 0.85rem; padding: 14px 20px; }
+    .result-card { padding: 20px; }
+    .sentiment-label { font-size: 1.6rem; }
+    .sentiment-emoji { font-size: 2rem; }
+    .history-card { font-size: 0.82rem; }
+    .metric-card { padding: 16px; }
+    .metric-value { font-size: 1.5rem; }
+    .metric-name { font-size: 0.68rem; }
+    footer { flex-direction: column; gap: 10px; align-items: flex-start; }
+    .section-label { font-size: 0.65rem; }
+    .mock-card { display: none; }
   }
 
   /* ── RESULT COLORS ── */
@@ -1010,6 +1034,33 @@
     `).join('');
   }
 
+  // ── Simulated inference (replace with real API call) ──
+  function simulateInference(text) {
+    // Heurística simples para demo — substitua por chamada real ao FastAPI
+    const lower = text.toLowerCase();
+    const posWords = ['excelente','ótimo','ótima','incrível','perfeito','perfeita','maravilhoso','maravilhosa','amei','adorei','recomendo','superou','rápido','rápida','qualidade','chegou','parabéns','bom','boa','gostei','satisfeito','satisfeita'];
+    const negWords = ['péssimo','péssima','horrível','ruim','quebrado','quebrada','não recebi','não chegou','fraude','enganado','enganada','decepção','decepcionante','arrependido','arrependida','lento','lenta','não funciona','vazando','rasgado'];
+
+    let posScore = 0, negScore = 0;
+    posWords.forEach(w => { if (lower.includes(w)) posScore += 1; });
+    negWords.forEach(w => { if (lower.includes(w)) negScore += 1; });
+
+    const total = posScore + negScore;
+    if (total === 0) {
+      return { sentiment: 'Neutro', scores: { pos: 15, neu: 65, neg: 20 } };
+    }
+
+    const posRatio = posScore / total;
+    if (posRatio > 0.6) {
+      const conf = 75 + Math.min(posScore * 5, 24);
+      return { sentiment: 'Positivo', scores: { pos: conf, neu: Math.floor((100-conf)*0.4), neg: Math.floor((100-conf)*0.6) } };
+    } else if (posRatio < 0.4) {
+      const conf = 75 + Math.min(negScore * 5, 24);
+      return { sentiment: 'Negativo', scores: { pos: Math.floor((100-conf)*0.3), neu: Math.floor((100-conf)*0.7), neg: conf } };
+    } else {
+      return { sentiment: 'Neutro', scores: { pos: 30, neu: 45, neg: 25 } };
+    }
+  }
 
   // ── Analyze ──
   async function analyze() {
@@ -1023,23 +1074,15 @@
     btn.disabled = true;
     btnText.innerHTML = '<span class="loading-dots"><span></span><span></span><span></span></span>';
 
-    try {
-        const res = await fetch('/analyze', { 
-            method:'POST', 
-            headers:{'Content-Type':'application/json'}, 
-            body: JSON.stringify({text}) 
-        });
-        
-        if (!res.ok) {
-            throw new Error(`API error: ${res.status}`);
-        }
-        
-        const result = await res.json();
-        showResult(text, result);
-    } catch(err) {
-        console.error(err);
-        alert('Erro ao conectar com a API de Sentimento!');
-    }
+    await new Promise(r => setTimeout(r, 700));
+
+    // Get result (replace simulateInference with fetch to your FastAPI)
+    const result = simulateInference(text);
+    // To connect real model: 
+    // const res = await fetch('http://localhost:8000/analyze', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text}) });
+    // const result = await res.json();
+
+    showResult(text, result);
 
     btn.disabled = false;
     btnText.textContent = 'Analisar Sentimento';
